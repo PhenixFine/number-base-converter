@@ -1,3 +1,5 @@
+import kotlin.math.abs
+
 fun main() {
     val result = convertToBase(getNum(), getBase())
 
@@ -17,13 +19,13 @@ fun getBase(message: String = "Enter target base: "): Int {
 
 fun convertToBase(number: Int, base: Int): String {
     var result = ""
-    var quotient = number
+    var quotient = abs(number)
 
     while (quotient >= base) {
         result = getConversion(quotient % base) + result
         quotient /= base
     }
-    return getConversion(quotient) + result
+    return (if (number < 0) "-" else "") + getConversion(quotient) + result
 }
 
 fun getConversion(remainder: Int) = (if (remainder >= 10) 'A' + remainder - 10 else remainder).toString()
