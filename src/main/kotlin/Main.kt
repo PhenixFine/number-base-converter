@@ -1,56 +1,78 @@
-import kotlin.math.abs
+import java.math.BigInteger
+
+val BASES = 2..36
 
 fun main() {
+    val message = "Enter two numbers in format: {source base} {target base} (To quit type /exit) "
+
     while (true) {
-        when (getString("Do you want to convert /from decimal or /to decimal? (To quit type /exit) ")) {
-            "/from" -> decimalToBase(getDecimal(), getBase("Enter the target base: "))
-            "/to" -> baseToDecimal(getString("Enter source number: "), getBase("Enter source base: "))
+        when (val command = getString(message)) {
             "/exit" -> return
-            else -> continue
+            else -> baseToBase(command.split(" "))
         }
         println()
     }
 }
 
-fun getDecimal(message: String = "Enter a number in decimal system: "): Int {
-    return getString(message).toIntOrNull() ?: getDecimal("Please enter a valid number: ")
+fun baseToBase(stringBases: List<String>) {
+    if (stringBases.size == 2 && stringBases[0] != stringBases[1]) {
+        val source = getBase(stringBases[0]) ?: return
+        val target = getBase(stringBases[1]) ?: return
+        val message = "Enter number in base $source to convert to base $target (To go back type /back) "
+        var command = getString(message)
+
+        while (command != "/back") {
+            val result = getConversion(source, target, command)
+            println(if (result != null) "Conversion result: $result" else "$command is invalid for base $source")
+            command = getString("\n" + message)
+        }
+    } else println("Please enter two numbers within ($BASES), that are not equal to each other")
 }
 
-fun getBase(message: String): Int {
-    val bases = listOf(2, 8, 16)
-    val base = getDecimal(message)
+fun getConversion(source: BigInteger, target: BigInteger, number: String): String? {
+    val decimal = (if (source == BigInteger.TEN) number.toBigIntegerOrNull() else
+        (baseToDecimal(number, source))) ?: return null
 
-    return if (base in bases) base else getBase("Please enter a valid base $bases: ")
+    return if (target == BigInteger.TEN) decimal.toString() else decimalToBase(decimal, target)
 }
 
-fun decimalToBase(number: Int, base: Int) {
+fun getBase(number: String): BigInteger? {
+    val base = number.toIntOrNull()
+
+    return if (base == null || base !in BASES) {
+        println("$number is not a valid base ($BASES)")
+        null
+    } else base.toBigInteger()
+}
+
+fun decimalToBase(number: BigInteger, base: BigInteger): String {
     var result = ""
-    var quotient = abs(number)
+    var quotient = number.abs()
 
     while (quotient >= base) {
-        result = getBaseConversion(quotient % base) + result
+        result = getBaseConversion(quotient.remainder(base).toInt()) + result
         quotient /= base
     }
-    println("Conversion result: " + (if (number < 0) "-" else "") + getBaseConversion(quotient) + result)
+    return (if (number < BigInteger.ZERO) "-" else "") + getBaseConversion(quotient.toInt()) + result
 }
 
 fun getBaseConversion(remainder: Int) = (if (remainder >= 10) 'a' + remainder - 10 else remainder).toString()
 
-fun baseToDecimal(number: String, base: Int) {
+fun baseToDecimal(number: String, base: BigInteger): BigInteger? {
     val negative = number.startsWith("-")
     val abs = if (negative) number.substring(1) else number
     val valid = abs.isNotEmpty() && abs.all { it.isLetterOrDigit() }
-    val list = if (valid) abs.reversed().lowercase().toCharArray().map { getDecimalConversion(it) } else emptyList()
-    val result = if (list.isEmpty() || list.any { it >= base }) "$number is invalid for base $base" else {
-        var multiply = 1
-        val sum = list.sumOf { it * multiply.also { multiply *= base } }
-        "Conversion to decimal result: " + if (negative) -sum else sum
-    }
+    val list = if (valid) abs.reversed().lowercase().toCharArray()
+        .map { getDecimalConversion(it).toBigInteger() } else emptyList()
 
-    println(result)
+    return if (list.isEmpty() || list.any { it >= base }) null else {
+        var multiply = BigInteger.ONE
+        val sum = list.sumOf { it * multiply.also { multiply *= base } }
+        if (negative) -sum else sum
+    }
 }
 
-fun getDecimalConversion(number: Char) = (if (number.isLetter()) number.code - 87 else number.digitToInt())
+fun getDecimalConversion(number: Char) = if (number.isLetter()) number.code - 87 else number.digitToInt()
 
 fun getString(message: String): String {
     print(message)
